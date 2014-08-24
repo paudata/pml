@@ -1,0 +1,109 @@
+
+## Abstract 
+ I used the random forest method to estimate features for the Human Activity Recognition data set from Groupware. I divided the training data set into two samples with 70% cases going to the training_training data set, and 30% goinng to the training_testing data set. This allowed me to test my model before predicting the actual test. I got 0.998 accuracy.
+ 
+ 
+ 
+ 
+## Data 
+The data is taken from the [Human Activity Recognition](http://groupware.les.inf.puc-rio.br/har) program at [Groupware](http://groupware.les.inf.puc-rio.br/). 
+
+ ```{r loading data, cache=TRUE} 
+ library(caret)
+training<-read.csv('pml-training.csv')
+testing<-read.csv('pml-testing.csv')
+ ```  
+The data set includes many columns with variables with NAs. I am removing them from my analysis.
+
+ ```{r cleaning data, cache=TRUE} 
+columnnames<-names(training)
+training2<-training[,-grep("kurtosis_",columnnames)]
+columnnames<-names(training2)
+training3<-training2[,-grep("skew",columnnames)]
+columnnames<-names(training3)
+training4<-training3[,-grep("min_",columnnames)]
+columnnames<-names(training4)
+training5<-training4[,-grep("max_",columnnames)]
+columnnames<-names(training5)
+training6<-training5[,-grep("amplitude_",columnnames)]
+columnnames<-names(training6)
+training7<-training6[,-grep("var_",columnnames)]
+columnnames<-names(training7)
+training8<-training7[,-grep("avg_",columnnames)]
+columnnames<-names(training8)
+training9<-training8[,-grep("stddev_",columnnames)]
+training10<-training9[,-c(1,2,6,7)]
+ ```  
+I also decided not to use user_name, new_window and num_window variables in my model.
+
+## Method 
+I use the Random Forests method. I also divided my training set into training and testing sets in order to be able to test my prediction before submiting my prediction for 20 test cases. 
+ ```{r train, cache=TRUE} 
+set.seed(1111)
+inTrain<-createDataPartition(y=training10$classe,p=0.7, list=FALSE)
+training_training<-training10[inTrain,]
+training_testing<-training10[-inTrain,]
+
+
+modfit<-train(as.factor(training_training$classe) ~.,method="rf",data=training_training)
+
+ ``` 
+
+
+
+## Results 
+I can compare my predictions of my test cases I created with the true values.
+```{r testing} 
+prediction<-predict(modfit,training_testing)
+table(prediction,training_testing$classe) 
+``` 
+We can see that my predictions are rather accurate as most cases are located on the diagonal of the table. However, we can look into some statistics to see how accurate these predictions are.
+
+```{r summary} 
+confusionMatrix(prediction,training_testing$classe)
+``` 
+ 
+ Accuracy is high (0.998) with a very small confidence interval (0.996,0.999), which means I can be fairly certain of my predictions and my out of sample error is low.
+ 
+ 
+ ```{r plot} 
+ plot( varImp(modfit) ) 
+ ``` 
+
+
+Finally, I need predictions for the test cases in the assignment.
+I am subjecting the testing data set to the same manipulations I done with the training data set. (I got 20/20 when I submited my predictions.)
+```{r predictions}
+columnnames<-names(testing)
+testing2<-testing[,-grep("kurtosis_",columnnames)]
+columnnames<-names(testing2)
+testing3<-testing2[,-grep("skew",columnnames)]
+columnnames<-names(testing3)
+testing4<-testing3[,-grep("min_",columnnames)]
+columnnames<-names(testing4)
+testing5<-testing4[,-grep("max_",columnnames)]
+columnnames<-names(testing5)
+testing6<-testing5[,-grep("amplitude_",columnnames)]
+columnnames<-names(testing6)
+testing7<-testing6[,-grep("var_",columnnames)]
+columnnames<-names(testing7)
+testing8<-testing7[,-grep("avg_",columnnames)]
+columnnames<-names(testing8)
+testing9<-testing8[,-grep("stddev_",columnnames)]
+testing10<-testing9[,-c(1,2,6,7)]
+
+prediction2<-predict(modfit,testing10)
+
+
+answers<-prediction2
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(answers)
+
+```
